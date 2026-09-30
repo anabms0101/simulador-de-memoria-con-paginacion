@@ -17,8 +17,7 @@
   - Alerta visual de Thrashing cuando el tiempo de penalización supera umbrales críticos.
 - **Módulo de Archivos:** Generación de instrucciones aleatorias mediante semillas numéricas (`seed`), exportación e importación de archivos de operaciones.
 
----
-'''bash
+```bash
 cd backend
 
 gcc main.c mmu.c simulacion.c parser.c -o simulador
