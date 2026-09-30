@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador MMU - Memoria Virtual</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent: #3b82f6;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 2px solid #334155; padding-bottom: 8px; }
+        
+        /* Panel de Control y Métricas */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .metric-box {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-box span { font-size: 1.5rem; font-weight: bold; color: var(--accent); }
+        .thrashing-alert {
+            background-color: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            margin-top: 10px;
+        }
+        
+        /* Controles */
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        button, label.btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            text-align: center;
+        }
+        button:hover, label.btn:hover { background-color: #2563eb; }
+        button.secondary { background-color: #475569; }
+        button.secondary:hover { background-color: #334155; }
+        input[type="file"] { display: none; }
+
+        /* Cuadrícula de RAM (100 Marcos) */
+        .ram-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 6px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 5px;
+        }
+        .marco {
+            background-color: #334155;
+            height: 35px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .marco.ocupado { background-color: var(--success); color: #000; }
+        
+        /* Consola de Operaciones */
+        .console {
+            background: #000;
+            color: #38bdf8;
+            font-family: monospace;
+            padding: 12px;
+            border-radius: 8px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Simulador MMU - Memoria Virtual (RAM / V-RAM)</h1>
+        <p>Proyecto Universitario de Sistemas Operativos</p>
+    </header>
+
+    <div class="container">
+        <!-- Columna Izquierda: Visualización de Memoria -->
+        <div>
+            <div class="card">
+                <h2>Memoria RAM Física (100 Marcos / 400 KB)</h2>
+                <div class="ram-grid" id="ramGrid">
+                    <!-- Generado dinámicamente con JS -->
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Consola de Ejecución en Tiempo Real</h2>
+                <div class="console" id="consoleLog">
+                    [Sistema] Listo para iniciar simulación...<br>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Métricas y Controles -->
+        <div>
+            <div class="card">
+                <h2>Panel de Métricas</h2>
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <small>Reloj Global</small><br>
+                        <span id="lblReloj">0s</span>
+                    </div>
+                    <div class="metric-box">
+                        <small>Thrashing</small><br>
+                        <span id="lblThrashing">0%</span>
+                    </div>
+                </div>
+                <!-- Alerta obligatoria si Thrashing > 50% -->
+                <div id="thrashingAlert" class="thrashing-alert">
+                    ¡ALERTA: Thrashing Crítico (> 50%)!
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Controles de Simulación</h2>
+                <div style="margin-bottom: 15px;">
+                    <label>Algoritmo de Reemplazo:</label>
+                    <select id="selectAlgo" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; background: #0f172a; color: white; border: 1px solid #475569;">
+                        <option value="FIFO">FIFO</option>
+                        <option value="SC">Second Chance (SC)</option>
+                        <option value="LRU">LRU</option>
+                        <option value="LFU">LFU</option>
+                        <option value="OPT">Óptimo (OPT)</option>
+                    </select>
+                </div>
+
+                <div class="controls">
+                    <button id="btnPlay" onclick="iniciarSimulacion()">▶ Iniciar</button>
+                    <button id="btnPausar" class="secondary" onclick="pausarSimulacion()">⏸ Pausa</button>
+                    <button class="secondary" onclick="reiniciarSimulacion()">🔄 Reiniciar</button>
+                </div>
+
+                <hr style="border-color: #334155; margin: 20px 0;">
+
+                <h2>Archivos</h2>
+                <div class="controls" style="flex-direction: column;">
+                    <label for="fileInput" class="btn">📁 Cargar Archivo de Operaciones</label>
+                    <input type="file" id="fileInput" onchange="cargarArchivo(event)">
+                    <button class="secondary" onclick="descargarInstrucciones()">📥 Descargar Operaciones</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar la cuadrícula de 100 marcos de RAM
+        const ramGrid = document.getElementById('ramGrid');
+        const totalMarcos = 100;
+        let marcosEstado = new Array(totalMarcos).fill(false);
+
+        function renderizarRAM() {
+            ramGrid.innerHTML = '';
+            for (let i = 0; i < totalMarcos; i++) {
+                const marco = document.createElement('div');
+                marco.className = `marco ${marcosEstado[i] ? 'ocupado' : ''}`;
+                marco.innerText = i;
+                ramGrid.appendChild(marco);
+            }
+        }
+
+        function log(mensaje) {
+            const consoleLog = document.getElementById('consoleLog');
+            consoleLog.innerHTML += `> ${mensaje}<br>`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        let simulando = false;
+        let relojSegundos = 0;
+
+        function iniciarSimulacion() {
+            if (simulando) return;
+            simulando = true;
+            log("Iniciando simulación simultánea (Usuario vs OPT)...");
+            
+            // Simulación visual de prueba en el frontend
+            window.simInterval = setInterval(() => {
+                relojSegundos += 2;
+                document.getElementById('lblReloj').innerText = relojSegundos + "s";
+
+                // Simular ocupación aleatoria de marcos
+                let marcoAleatorio = Math.floor(Math.random() * totalMarcos);
+                marcosEstado[marcoAleatorio] = !marcosEstado[marcoAleatorio];
+                renderizarRAM();
+
+                // Calcular thrashing de prueba (ejemplo dinámico)
+                let thrashingVal = Math.floor(Math.random() * 60); 
+                document.getElementById('lblThrashing').innerText = thrashingVal + "%";
+
+                const alerta = document.getElementById('thrashingAlert');
+                if (thrashingVal > 50) {
+                    alerta.style.display = 'block'; // Se marca en rojo si supera el 50%
+                } else {
+                    alerta.style.display = 'none';
+                }
+
+                log(`Ejecutando instrucción... Reloj: ${relojSegundos}s`);
+            }, 1000);
+        }
+
+        function pausarSimulacion() {
+            simulando = false;
+            clearInterval(window.simInterval);
+            log("Simulación pausada.");
+        }
+
+        function reiniciarSimulacion() {
+            pausarSimulacion();
+            relojSegundos = 0;
+            document.getElementById('lblReloj').innerText = "0s";
+            document.getElementById('lblThrashing').innerText = "0%";
+            document.getElementById('thrashingAlert').style.display = 'none';
+            marcosEstado.fill(false);
+            renderizarRAM();
+            log("Simulación reiniciada.");
+        }
+
+        function descargarInstrucciones() {
+            const contenido = "1,1,8000\n1,1,1\n1,1,1\n1,1,0";
+            const blob = new Blob([contenido], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "operaciones.txt";
+            a.click();
+            log("Archivo de operaciones descargado con éxito.");
+        }
+
+        function cargarArchivo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    log(`Archivo '${file.name}' cargado correctamente.`);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Render inicial al cargar la página
+        renderizarRAM();
+    </script>
+</body>
+</html>
