@@ -7,3 +7,4 @@
 gcc main.c mmu.c simulacion.c parser.c -o simulador
 
 ./simulador
+'''
