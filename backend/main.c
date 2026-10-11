@@ -2,6 +2,7 @@
 #include "mmu.h"
 #include "parser.h"
 #include "simulacion.h"
+#include "gui.h"
 #include <string.h>
 #include <strings.h>
 #include <ctype.h>
@@ -115,6 +116,8 @@ static void modo_interactivo(void) {
 /* ===================== Modo no interactivo (CLI) =====================
  *
  * Uso:
+ *   ./simulador                                        (ventana grafica, GTK4)
+ *   ./simulador --consola                               (menus por texto en la terminal)
  *   ./simulador <algoritmo> --archivo <ruta> [--auto]
  *   ./simulador <algoritmo> --generar <semilla> <P> <N> [--auto]
  *
@@ -179,9 +182,16 @@ static int modo_cli(int argc, char** argv) {
 }
 
 int main(int argc, char** argv) {
+    if (argc > 1 && !strcmp(argv[1], "--consola")) {
+        modo_interactivo();
+        return 0;
+    }
     if (argc > 1) {
         return modo_cli(argc, argv);
     }
-    modo_interactivo();
-    return 0;
+    /* Sin argumentos: la interfaz principal pedida por el enunciado es
+     * la ventana grafica (GTK4). El modo de texto sigue disponible con
+     * --consola, y el modo por linea de comandos para correr un archivo
+     * de pruebas sin abrir ninguna ventana. */
+    return ejecutar_app_gtk(argc, argv);
 }

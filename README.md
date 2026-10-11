@@ -8,64 +8,99 @@ usuario vs. el algoritmo Óptimo (OPT/Belady) — para poder comparar.
 
 ## Características
 
+- **Interfaz gráfica nativa (GTK4)**: ventana de configuración (algoritmo,
+  semilla, archivo o generación aleatoria) que al iniciar abre una
+  **nueva ventana** con la simulación en vivo — dos paneles lado a lado
+  (algoritmo elegido vs. OPT), cada uno con su barra de ocupación de RAM
+  coloreada por proceso, tabla de páginas con scroll (estilo Anexo 2) y
+  tarjetas de métricas, más controles de reproducir/pausar/avanzar un
+  paso y control de velocidad.
 - **5 algoritmos de reemplazo de páginas, cada uno con lógica propia:**
   FIFO, Second Chance (SC), LRU, LFU y OPT (óptimo, con *lookahead* real
-  sobre las instrucciones futuras).
+  sobre las instrucciones futuras). Solo FIFO/SC/LRU/LFU son
+  seleccionables por el usuario; OPT corre siempre en paralelo como
+  referencia, tal como lo pide el enunciado.
 - **Mapa de punteros (`ptr`) global y nunca reutilizado**, incluso tras un
   `delete()`, tal como exige el enunciado.
 - **Reloj y thrashing simulados:** +1 s por *hit*, +5 s por *fallo* de
   página (las páginas nuevas siempre cuentan como fallo), con alerta en
   rojo cuando el thrashing supera el 50 % del tiempo total.
 - **Fragmentación interna**, procesos activos, páginas cargadas/
-  descargadas y uso de RAM/V-RAM reportados tras cada instrucción.
+  descargadas y uso de RAM/V-RAM (con el V-RAM % pudiendo superar el
+  100 %, tal como lo ilustra el enunciado) reportados en vivo.
 - **Parser de archivos de operaciones** (formato Anexo 1: `new(pid,size)`,
   `use(ptr)`, `delete(ptr)`, `kill(pid)`), tolerante a espacios y saltos
   de línea `CRLF`/`LF`, que ignora líneas en blanco y comentarios (`#`).
 - **Generador de operaciones aleatorio y reproducible** (misma semilla →
   mismo archivo), respetando las reglas del enunciado y guardando el
-  archivo generado en disco (`operaciones_generadas_<semilla>.txt`)
-  *antes* de arrancar la simulación.
-- **Modo paso a paso o automático**, con pausa/reanudación por `ENTER`
-  cuando se corre desde una terminal interactiva.
+  archivo generado en disco *antes* de arrancar la simulación (su ruta
+  queda visible en la propia ventana de la simulación).
+- **Modo paso a paso o automático**, con pausa/reanudación, tanto en la
+  interfaz gráfica como en el modo de texto/línea de comandos de
+  respaldo.
 
-## Compilación (Debian 13 / cualquier Linux con gcc)
+## Compilación (Debian 13 / cualquier Linux con GTK4)
 
-No hay dependencias externas, solo la librería estándar de C y POSIX
-(`select`, `strcasecmp`, `isatty`). Se probó explícitamente con `gcc`
-en modo estricto `-std=c11 -pedantic -Wall -Wextra` y en modo por
-defecto, sin advertencias:
+La interfaz gráfica usa GTK4. En Debian 13 (o cualquier Debian/Ubuntu
+reciente) se instala con:
+
+```bash
+sudo apt install build-essential pkg-config libgtk-4-dev
+```
+
+Y se compila así (sin más dependencias):
 
 ```bash
 cd backend
-gcc main.c mmu.c simulacion.c parser.c -o simulador
+gcc main.c mmu.c simulacion.c parser.c gui.c -o simulador $(pkg-config --cflags --libs gtk4)
 ```
+
+Se probó explícitamente con `gcc -std=c11 -pedantic -Wall -Wextra`: compila
+sin errores (solo avisos de "deprecated" de la propia GTK4 por usar
+`GtkTreeView`/`GtkComboBoxText` en vez de los widgets más nuevos
+`GtkColumnView`/`GtkDropDown`, que siguen siendo API estable y soportada).
 
 ## Ejecución
 
-### Modo interactivo
+### Interfaz gráfica (modo por defecto)
 
 ```bash
 ./simulador
 ```
 
-Pide por consola: algoritmo (FIFO/SC/LRU/LFU/OPT), si se carga un archivo
-de operaciones existente o se genera uno aleatorio (semilla, cantidad de
-procesos `P`, cantidad total de operaciones `N`), y el modo de avance
-(paso a paso o automático).
+Abre la ventana de configuración: ahí se elige el algoritmo (FIFO, SC,
+LRU o LFU — OPT corre siempre en paralelo, no se selecciona), y se
+indica si se carga un archivo de operaciones existente (formato Anexo 1,
+con selector de archivos) o se genera uno aleatorio nuevo (semilla,
+cantidad de procesos `P`, cantidad total de operaciones `N`). Al
+presionar "Iniciar simulación" se abre la ventana de la simulación, con
+los dos paneles en vivo y los controles de reproducir / pausar / avanzar
+un paso / velocidad.
 
-### Modo por línea de comandos (recomendado para pruebas automatizadas)
+Se verificó visualmente (capturas de pantalla) y funcionalmente: corridas
+cortas, corridas completas de cientos de instrucciones hasta el final, y
+bajo `gcc -fsanitize=address` interactuando con la interfaz, sin errores
+ni fugas de memoria.
+
+### Modo de texto / línea de comandos (respaldo, sin ventana)
+
+Útil para correr el archivo de pruebas del profesor sin depender de la
+interfaz gráfica, o si por algún motivo no hay entorno de escritorio
+disponible:
 
 ```bash
-# Con un archivo de operaciones ya existente
-./simulador fifo --archivo ops.txt
+./simulador --consola                               # menus por texto en la terminal
+
+./simulador fifo --archivo ops.txt                   # con un archivo existente
 ./simulador lru  --archivo ops.txt --auto
 
-# Generando una secuencia aleatoria nueva (semilla, P, N)
-./simulador opt --generar 42 10 200
+./simulador opt --generar 42 10 200                  # generando una secuencia nueva
 ```
 
 `<algoritmo>` es uno de: `fifo | sc | lru | lfu | opt` (sin distinguir
-mayúsculas). `--auto` avanza solo, en vez de pedir `ENTER` por paso.
+mayúsculas; en el modo CLI sí se acepta `opt` además de FIFO/SC/LRU/LFU,
+por si se quiere comparar OPT contra sí mismo). `--auto` avanza solo, en
+vez de pedir `ENTER` por paso.
 
 Si la entrada estándar no es una terminal interactiva (por ejemplo al
 redirigir desde un archivo, un *pipe*, o al correr en un script de
@@ -94,7 +129,8 @@ EOF
 Esto asigna `ptr` 1, 2, 3, 4 y 5 en orden estrictamente secuencial (el
 `ptr` de `new(2,5320)` es el 3, el de `new(3,345)` es el 4 y el de
 `new(1,100)` final es el 5), sin repetir nunca un `ptr` ya usado — se
-verificó explícitamente contra este caso.
+verificó explícitamente contra este caso, tanto por línea de comandos
+como cargando el mismo archivo desde la interfaz gráfica.
 
 ## Qué se corrigió respecto a la versión anterior
 
@@ -130,26 +166,24 @@ contra el enunciado. Los problemas encontrados y corregidos:
    calificación) provocaba que la simulación terminara tras el primer
    paso al leer `EOF`. Se detecta ahora si `stdin` es una terminal real
    y, si no lo es, se corre de corrido.
+7. **No existía ninguna interfaz gráfica real** — solo un prototipo HTML
+   desconectado (ver abajo). Se construyó una interfaz de escritorio en
+   GTK4 (`gui.c`) que reutiliza exactamente el mismo motor ya probado en
+   `mmu.c`/`parser.c` (no duplica lógica de simulación), con el flujo de
+   dos ventanas que pide el enunciado y la visualización lado a lado
+   estilo Anexo 2.
 
 Se verificó con `gcc -fsanitize=address,undefined` corriendo los 5
-algoritmos sobre cientos de instrucciones generadas aleatoriamente, sin
-errores de memoria ni fugas.
+algoritmos sobre cientos de instrucciones generadas aleatoriamente (modo
+texto) y también interactuando con la interfaz gráfica (clics reales de
+reproducir/pausar/avanzar simulados con `xdotool` sobre un X virtual),
+sin errores de memoria ni fugas en ningún caso.
 
-## Limitación conocida: `frontend/index.html`
+## Nota sobre `frontend/index.html`
 
-El archivo `frontend/index.html` sigue siendo el prototipo visual
-original: es una maqueta estática en HTML/JS que **no está conectada al
-backend en C** (usa `Math.random()` para simular datos). Conectarlo de
-verdad requeriría un servidor HTTP en C (o similar) sirviendo la
-simulación por una API, lo cual es un cambio de arquitectura mucho más
-grande y riesgoso de entregar sin poder probarlo a fondo en el tiempo
-disponible.
-
-En su lugar, el backend en C ahora imprime un **dashboard de texto**
-completo después de cada instrucción (barra de ocupación de RAM, tabla
-de páginas estilo Anexo 2, y métricas), para el algoritmo del usuario y
-para OPT en paralelo, lo cual cubre la parte funcional/algorítmica de la
-visualización pedida en el enunciado — pero no es una interfaz gráfica.
-Si el rubro de "diseño de interfaz" pesa en la calificación, vale la
-pena mencionarlo con el profesor o, si hay tiempo después de la entrega,
-conectar el frontend es el siguiente paso natural.
+Ese archivo es un prototipo visual anterior en HTML/JS (con datos falsos
+vía `Math.random()`) que había quedado desconectado del backend. Ya no es
+necesario: la interfaz real del proyecto es la ventana GTK4 descrita
+arriba, que sí corre contra el motor de simulación real. El archivo se
+deja en el repositorio sin tocar por si se quiere reutilizar como
+referencia visual, pero no es parte del flujo de entrega.
