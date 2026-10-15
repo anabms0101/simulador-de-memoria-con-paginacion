@@ -51,7 +51,7 @@ sudo apt install build-essential pkg-config libgtk-4-dev
 Y se compila así (sin más dependencias):
 
 ```bash
-cd backend
+cd carpeta-descomprimida-con-el-proyecto
 gcc main.c mmu.c simulacion.c parser.c gui.c -o simulador $(pkg-config --cflags --libs gtk4)
 ```
 
@@ -88,14 +88,14 @@ un paso / velocidad.
 La ventana se ajusta al tamaño de la pantalla; si aun así el contenido no
 cabe, aparece una barra de desplazamiento vertical.
 
-Se verificó visualmente (capturas de pantalla) y funcionalmente: corridas
+Se verificó visualmente y funcionalmente: corridas
 cortas, corridas completas de cientos de instrucciones hasta el final, y
 bajo `gcc -fsanitize=address` interactuando con la interfaz, sin errores
 ni fugas de memoria.
 
 ### Modo de texto / línea de comandos (respaldo, sin ventana)
 
-Útil para correr el archivo de pruebas del profesor sin depender de la
+Útil para correr el archivo de pruebas sin depender de la
 interfaz gráfica, o si por algún motivo no hay entorno de escritorio
 disponible:
 
@@ -178,7 +178,7 @@ contra el enunciado. Los problemas encontrados y corregidos:
    paso al leer `EOF`. Se detecta ahora si `stdin` es una terminal real
    y, si no lo es, se corre de corrido.
 7. **No existía ninguna interfaz gráfica real** — solo un prototipo HTML
-   desconectado (ver abajo). Se construyó una interfaz de escritorio en
+   desconectado. Se construyó una interfaz de escritorio en
    GTK4 (`gui.c`) que reutiliza exactamente el mismo motor ya probado en
    `mmu.c`/`parser.c` (no duplica lógica de simulación), con el flujo de
    dos ventanas que pide el enunciado y la visualización lado a lado
@@ -189,12 +189,3 @@ algoritmos sobre cientos de instrucciones generadas aleatoriamente (modo
 texto) y también interactuando con la interfaz gráfica (clics reales de
 reproducir/pausar/avanzar simulados con `xdotool` sobre un X virtual),
 sin errores de memoria ni fugas en ningún caso.
-
-## Nota sobre `frontend/index.html`
-
-Ese archivo es un prototipo visual anterior en HTML/JS (con datos falsos
-vía `Math.random()`) que había quedado desconectado del backend. Ya no es
-necesario: la interfaz real del proyecto es la ventana GTK4 descrita
-arriba, que sí corre contra el motor de simulación real. El archivo se
-deja en el repositorio sin tocar por si se quiere reutilizar como
-referencia visual, pero no es parte del flujo de entrega.
