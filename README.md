@@ -183,9 +183,3 @@ contra el enunciado. Los problemas encontrados y corregidos:
    `mmu.c`/`parser.c` (no duplica lógica de simulación), con el flujo de
    dos ventanas que pide el enunciado y la visualización lado a lado
    estilo Anexo 2.
-
-Se verificó con `gcc -fsanitize=address,undefined` corriendo los 5
-algoritmos sobre cientos de instrucciones generadas aleatoriamente (modo
-texto) y también interactuando con la interfaz gráfica (clics reales de
-reproducir/pausar/avanzar simulados con `xdotool` sobre un X virtual),
-sin errores de memoria ni fugas en ningún caso.
