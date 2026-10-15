@@ -77,6 +77,17 @@ presionar "Iniciar simulación" se abre la ventana de la simulación, con
 los dos paneles en vivo y los controles de reproducir / pausar / avanzar
 un paso / velocidad.
 
+**Controles de la ventana de simulación** (barra superior, siempre visible):
+
+| Control | Qué hace | Tecla |
+|---|---|---|
+| ▶ Reproducir / ⏸ Pausar | Avanza sola, una instrucción tras otra; vuelve a presionar para pausar y reanudar | `Espacio` |
+| ⏭ Avanzar un paso | Ejecuta una sola instrucción (solo con la simulación en pausa) | `→` (flecha derecha) |
+| Velocidad (lenta ↔ rápida) | Deslizador que cambia el tiempo entre instrucciones en modo reproducir | — |
+
+La ventana se ajusta al tamaño de la pantalla; si aun así el contenido no
+cabe, aparece una barra de desplazamiento vertical.
+
 Se verificó visualmente (capturas de pantalla) y funcionalmente: corridas
 cortas, corridas completas de cientos de instrucciones hasta el final, y
 bajo `gcc -fsanitize=address` interactuando con la interfaz, sin errores
